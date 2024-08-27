@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Cache Docker layers
+      id: cache-docker
+      uses: actions/cache@v3
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-buildx-
+
+    - name: Determine services to build
+      id: changes
+      run: |
+        echo "CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})" >> $GITHUB_ENV
+
+    - name: Build Service 1
+      if: contains(env.CHANGED_FILES, 'service1/')
+      run: make service1
+
+    - name: Build Service 2
+      if: contains(env.CHANGED_FILES, 'service2/')
+      run: make service2
+
+    - name: Build Service 3
+      if: contains(env.CHANGED_FILES, 'service3/')
+      run: make service3
+
+    - name: Clean Docker images
+      run: make clean
+
+    - name: Run tests
+      run: make test
